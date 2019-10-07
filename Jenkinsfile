@@ -25,9 +25,7 @@ pipeline {
         }
       }
       steps {
-        dir('getting-started-testing') {
-           sh "mvn clean package"
-        }
+        sh "mvn clean package"
       }
     }
 
@@ -40,9 +38,7 @@ pipeline {
         }
       }
       steps {
-        dir('getting-started-testing') {
-           sh "./mvnw package -Pnative"
-        }
+        sh "./mvnw package -Pnative"
       }
     }
 
