@@ -1,1 +1,1 @@
-Generated using https://code.quarkus.io/
+Generated using https://code.quarkus.io
