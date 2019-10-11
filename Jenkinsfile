@@ -45,6 +45,7 @@ pipeline {
     stage('report') {
       steps {
         junit '**/target/surefire-reports/*.xml'
+        archiveArtifacts 'target/*-runner'
       }
     }
   }
