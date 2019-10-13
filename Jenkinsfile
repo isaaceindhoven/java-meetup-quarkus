@@ -8,7 +8,7 @@ pipeline {
   
   environment {
     JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
-    GIT_SHA_SHORT=sh("git rev-parse --short=8 ${GIT_COMMIT}")
+    GIT_SHA_SHORT=sh(script: "git rev-parse --short ${GIT_COMMIT}", returnStdout: true).trim()
     APP_IMAGE="jwnmulder/java-meetup-quarkus:1.0-b${env.BUILD_ID}.${env.GIT_SHA_SHORT}"
   }
 
