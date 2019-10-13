@@ -34,6 +34,7 @@ pipeline {
       }
       steps {
         sh "mvn clean package"
+        junit '**/target/surefire-reports/*.xml'
       }
     }
 
@@ -53,67 +54,92 @@ pipeline {
     }
 
     stage('docker build') {
-        steps {
-          script {
-            def image = docker.build(env.APP_IMAGE, "-f src/main/docker/Dockerfile.jvm --pull .")
-            docker.withRegistry("https://registry.hub.docker.com", "docker-hub") {
-              image.push()
-            }
+      steps {
+        script {
+          def image = docker.build(env.APP_IMAGE, "-f src/main/docker/Dockerfile.jvm --pull .")
+          docker.withRegistry("https://registry.hub.docker.com", "docker-hub") {
+            image.push()
           }
         }
+      }
     }
 
     stage('prepare deploy') {
-        agent {
-          docker {
-            image 'place1/kube-tools:2019.10.13'
-            reuseNode true
-            args "--entrypoint=''"
-          }
+      agent {
+        docker {
+          image 'place1/kube-tools:2019.10.13'
+          reuseNode true
+          args "--entrypoint=''"
         }
-        steps {
-          dir('deploy') {
-              sh """
-                > kustomization.yaml
-                kustomize edit add base overlays/jenkins-with-nodeport
-                kustomize edit set nameprefix '${env.KUBE_NAME_PREFIX}-'
-                kustomize edit add label 'app.kubernetes.io/part-of:${env.KUBE_DEPLOY_NAME}'
-                kustomize edit set image '${env.APP_IMAGE}'
-                kustomize build > generated.yaml
-              """
-          }
+      }
+      steps {
+        dir('deploy') {
+            sh """
+              > kustomization.yaml
+              kustomize edit add base overlays/jenkins-with-nodeport
+              kustomize edit set nameprefix '${env.KUBE_NAME_PREFIX}-'
+              kustomize edit add label 'app.kubernetes.io/part-of:${env.KUBE_DEPLOY_NAME}'
+              kustomize edit set image '${env.APP_IMAGE}'
+              kustomize build > generated.yaml
+            """
         }
+      }
     }
 
     stage('deploy') {
-        agent {
-          docker {
-            image 'place1/kube-tools:2019.10.13'
-            reuseNode true
-            args "--entrypoint=''"
-          }
+      agent {
+        docker {
+          image 'place1/kube-tools:2019.10.13'
+          reuseNode true
+          args "--entrypoint=''"
         }
-        steps {
-          withCredentials([file(credentialsId: "kubectl-config", variable: 'KUBECONFIG')]) {
-            sh "kubectl -n ${env.KUBE_NAMESPACE} apply -f deploy/generated.yaml --prune -l 'app.kubernetes.io/part-of=${env.KUBE_DEPLOY_NAME}'"
-            sh "kubectl -n ${env.KUBE_NAMESPACE} rollout status  --watch deployment ${env.KUBE_DEPLOY_NAME}"
-            sh "kubectl -n ${env.KUBE_NAMESPACE} get deployments,ingress,service -o wide"
-            sh "kubectl -n ${env.KUBE_NAMESPACE} logs deployment/${KUBE_DEPLOY_NAME} -c web"
-          }
-        }
-    }
-
-    stage('manual approval') {
-        steps {
-          script {
-            sh(script: "kubectl -n ${env.KUBE_NAMESPACE} get service java-meetup-quarkus-external -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}'", returnStdout: true)
-          }
-        }
-    }
-
-    stage('report') {
+      }
       steps {
-        junit '**/target/surefire-reports/*.xml'
+        withCredentials([file(credentialsId: "kubectl-config", variable: 'KUBECONFIG')]) {
+          sh "kubectl -n ${env.KUBE_NAMESPACE} apply -f deploy/generated.yaml --prune -l 'app.kubernetes.io/part-of=${env.KUBE_DEPLOY_NAME}'"
+          sh "kubectl -n ${env.KUBE_NAMESPACE} rollout status  --watch deployment ${env.KUBE_DEPLOY_NAME}"
+          sh "kubectl -n ${env.KUBE_NAMESPACE} get deployments,ingress,service -o wide"
+          sh "kubectl -n ${env.KUBE_NAMESPACE} logs deployment/${KUBE_DEPLOY_NAME} -c web"
+
+          script {
+            def serviceNodePort = sh(script: "kubectl -n ${env.KUBE_NAMESPACE} get service ${env.KUBE_DEPLOY_NAME}-external -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}'", returnStdout: true)
+            env.APP_TEST_URL = "http://localhost:${serviceNodePort}/"
+          }
+        }
+        addBadge icon: "redo.png", link: "${env.APP_TEST_URL}", text: "Test URL: ${env.APP_TEST_URL}"
+      }
+    }
+
+    stage('Testing') {
+      parallel {
+        stage('automated testing') {
+          steps {
+            sleep 60
+          }
+        }
+        stage('manual approval') {
+          steps {
+            script {
+              sh "echo test"
+            }
+          }
+        }
+      }
+    }
+
+    stage('cleanup') {
+      when { not { branch 'mastera' } }
+      agent {
+        docker {
+          image 'place1/kube-tools:2019.10.13'
+          reuseNode true
+          args "--entrypoint=''"
+        }
+      }
+      steps {
+        withCredentials([file(credentialsId: "kubectl-config", variable: 'KUBECONFIG')]) {
+          sh "kubectl -n ${env.KUBE_NAMESPACE} delete -f deploy/generated.yaml"
+        }
       }
     }
   }
