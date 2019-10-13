@@ -8,6 +8,8 @@ pipeline {
   
   environment {
     JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
+    GIT_SHA_SHORT=sh("git rev-parse --short=8 ${GIT_COMMIT}")
+    APP_IMAGE="jwnmulder/java-meetup-quarkus:1.0-b${env.BUILD_ID}.${env.GIT_SHA_SHORT}"
   }
 
   stages {
@@ -30,22 +32,34 @@ pipeline {
     }
 
     stage ('native build') {
+      when { branch 'master' }
       agent {
         docker {
           image "quay.io/quarkus/ubi-quarkus-native-image:19.2.0.1"
           reuseNode true
-          args "--entrypoint=''"
+          args "--entrypoint='' --memory=3g"
         }
       }
       steps {
         sh "./mvnw package -Pnative"
+        archiveArtifacts 'target/*-runner'
       }
+    }
+
+    stage('docker build') {
+        steps {
+          script {
+            def image = docker.build(env.APP_IMAGE, "-f src/main/docker/Dockerfile.jvm --pull .")
+            docker.withRegistry("https://registry.hub.docker.com", "docker-hub") {
+              image.push()
+            }
+          }
+        }
     }
 
     stage('report') {
       steps {
         junit '**/target/surefire-reports/*.xml'
-        archiveArtifacts 'target/*-runner'
       }
     }
   }
