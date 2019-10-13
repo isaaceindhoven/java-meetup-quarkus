@@ -1,0 +1,14 @@
+# Kubernetes kustomization file
+# Overlay variant: with ingress
+
+bases:
+- ../../base
+
+commonLabels:
+  app.kubernetes.io/instance: java-meetup-quarkus
+  app.kubernetes.io/managed-by: jenkins-kustomize
+  app.kubernetes.io/part-of: java-meetup-quarkus
+
+resources:
+- service-external.yaml
+

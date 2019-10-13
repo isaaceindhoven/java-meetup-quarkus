@@ -1,0 +1,10 @@
+# Kubernetes kustomization file
+# Base
+
+commonLabels:
+  app.kubernetes.io/instance: java-meetup-quarkus
+  app.kubernetes.io/part-of: java-meetup-quarkus
+
+resources:
+  - deployment.yaml
+  - service.yaml
