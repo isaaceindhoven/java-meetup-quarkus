@@ -15,7 +15,7 @@ spec:
         app.kubernetes.io/name: java-meetup-quarkus
     spec:
       containers:
-        - name: java-meetup-quarkus
+        - name: web
           image: registry.hub.docker.com/jwnmulder/java-meetup-quarkus:1.0-b10.479e5da
           imagePullPolicy: Always
           ports:
