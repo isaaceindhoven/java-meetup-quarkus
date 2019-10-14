@@ -8,11 +8,11 @@ pipeline {
   
   environment {
     JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
-    GIT_SHA_SHORT=sh(script: "git rev-parse --short ${GIT_COMMIT}", returnStdout: true).trim()
+    GIT_SHA_SHORT="${env.GIT_COMMIT.take(7)}"
     APP_NAME="java-meetup-quarkus"
     APP_IMAGE="jwnmulder/${env.APP_NAME}:1.0-b${env.BUILD_ID}.${env.GIT_SHA_SHORT}"
-    KUBE_NAMESPACE="default"
-    KUBE_NAME_PREFIX="${env.GIT_BRANCH.minus('origin/').replace('/', '-')}"
+    KUBE_NAMESPACE="java-meetup"
+    KUBE_NAME_PREFIX="${env.GIT_BRANCH.replace('/', '-')}"
     KUBE_DEPLOY_NAME="${env.KUBE_NAME_PREFIX}-${env.APP_NAME}"
   }
 
@@ -26,11 +26,7 @@ pipeline {
 
     stage ('build') {
       agent {
-        docker {
-          image "maven:3.6.2-jdk-11"
-          reuseNode true
-          args "-e MAVEN_CONFIG=${WORKSPACE}/.m2"
-        }
+        docker reuseNode: true, image: "maven:3.6.2-jdk-11", args: "-e MAVEN_CONFIG=${WORKSPACE}/.m2"
       }
       steps {
         sh "mvn clean package"
@@ -39,13 +35,9 @@ pipeline {
     }
 
     stage ('native build') {
-      when { branch 'mastera' }
+      when { branch 'native' }
       agent {
-        docker {
-          image "quay.io/quarkus/ubi-quarkus-native-image:19.2.0.1"
-          reuseNode true
-          args "--entrypoint='' --memory=3g"
-        }
+        docker reuseNode: true, image: "quay.io/quarkus/ubi-quarkus-native-image:19.2.0.1", args: "--entrypoint='' --memory=3g"
       }
       steps {
         sh "./mvnw package -Pnative"
@@ -66,11 +58,7 @@ pipeline {
 
     stage('prepare deploy') {
       agent {
-        docker {
-          image 'place1/kube-tools:2019.10.13'
-          reuseNode true
-          args "--entrypoint=''"
-        }
+        docker reuseNode: true, image: "place1/kube-tools:2019.10.13", args: "--entrypoint=''"
       }
       steps {
         dir('deploy') {
@@ -86,13 +74,9 @@ pipeline {
       }
     }
 
-    stage('deploy') {
+    stage('deploy to test') {
       agent {
-        docker {
-          image 'place1/kube-tools:2019.10.13'
-          reuseNode true
-          args "--entrypoint=''"
-        }
+        docker reuseNode: true, image: "place1/kube-tools:2019.10.13", args: "--entrypoint=''"
       }
       steps {
         withCredentials([file(credentialsId: "kubectl-config", variable: 'KUBECONFIG')]) {
@@ -101,12 +85,8 @@ pipeline {
           sh "kubectl -n ${env.KUBE_NAMESPACE} get deployments,ingress,service -o wide"
           sh "kubectl -n ${env.KUBE_NAMESPACE} logs deployment/${KUBE_DEPLOY_NAME} -c web"
 
-          script {
-            def serviceNodePort = sh(script: "kubectl -n ${env.KUBE_NAMESPACE} get service ${env.KUBE_DEPLOY_NAME}-external -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}'", returnStdout: true)
-            env.APP_TEST_URL = "http://localhost:${serviceNodePort}/"
-          }
+          addTestUrlBadge()
         }
-        addBadge icon: "redo.png", link: "${env.APP_TEST_URL}", text: "Test URL: ${env.APP_TEST_URL}"
       }
     }
 
@@ -114,33 +94,46 @@ pipeline {
       parallel {
         stage('automated testing') {
           steps {
-            sleep 60
-          }
-        }
-        stage('manual approval') {
-          steps {
             script {
               sh "echo test"
+              sleep 60
+            }
+          }
+        }
+        stage('manual testing') {
+          steps {
+            timeout(time: 15, unit: 'MINUTES')  {
+              input message: "Check results on ${env.APP_TEST_URL}", parameters: [choice(name: 'Tests OK?', choices: ['NOT OK', 'OK'])], submitterParameter: 'manualTestResult'
             }
           }
         }
       }
     }
 
-    stage('cleanup') {
-      when { not { branch 'mastera' } }
+    stage('Undeploy from test') {
       agent {
-        docker {
-          image 'place1/kube-tools:2019.10.13'
-          reuseNode true
-          args "--entrypoint=''"
-        }
+        docker reuseNode: true, image: 'place1/kube-tools:2019.10.13', args: "--entrypoint=''"
       }
       steps {
         withCredentials([file(credentialsId: "kubectl-config", variable: 'KUBECONFIG')]) {
           sh "kubectl -n ${env.KUBE_NAMESPACE} delete -f deploy/generated.yaml"
         }
+
+        disableTestUrlBadge()
       }
     }
   }
+}
+
+def addTestUrlBadge() {
+  script {
+    def serviceNodePort = sh(script: "kubectl -n ${env.KUBE_NAMESPACE} get service ${env.KUBE_DEPLOY_NAME}-external -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}'", returnStdout: true)
+    env.APP_TEST_URL = "http://localhost:${serviceNodePort}/"
+  }
+  addHtmlBadge id: 'test-url', html: "Test URL: <a href='${env.APP_TEST_URL}'>${env.APP_TEST_URL}</a>"
+}
+
+def disableTestUrlBadge() {
+  removeHtmlBadges id: 'test-url'
+  addHtmlBadge id: 'test-url', html: "Test URL: <a href='${env.APP_TEST_URL}' style='text-decoration: line-through;'>${env.APP_TEST_URL}</a>"
 }
