@@ -20,12 +20,7 @@ import javax.persistence.Table;
 public class Fruit {
 
     @Id
-    @SequenceGenerator(
-            name = "fruitsSequence",
-            sequenceName = "known_fruits_id_seq",
-            allocationSize = 1,
-            initialValue = 10)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "fruitsSequence")
+    @GeneratedValue(strategy=GenerationType.AUTO)
     private Integer id;
 
     @Column(length = 40, unique = true)
