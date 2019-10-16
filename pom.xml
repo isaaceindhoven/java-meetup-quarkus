@@ -7,10 +7,12 @@
   <version>1.0.0-SNAPSHOT</version>
   <properties>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    <maven.compiler.parameters>true</maven.compiler.parameters>
     <surefire-plugin.version>2.22.0</surefire-plugin.version>
-    <quarkus.version>0.23.2</quarkus.version>
+    <quarkus.version>0.25.0</quarkus.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.8</maven.compiler.source>
+    <compiler-plugin.version>3.8.1</compiler-plugin.version>
     <maven.compiler.target>1.8</maven.compiler.target>
   </properties>
   <dependencyManagement>
@@ -38,6 +40,26 @@
       <groupId>io.rest-assured</groupId>
       <artifactId>rest-assured</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-hibernate-orm</artifactId>
+    </dependency>
+    <dependency>
+    <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-agroal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-resteasy-jsonb</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-postgresql</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.quarkus</groupId>
+      <artifactId>quarkus-jdbc-h2</artifactId>
     </dependency>
     <dependency>
       <groupId>io.quarkus</groupId>
@@ -83,6 +105,10 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>${compiler-plugin.version}</version>
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>

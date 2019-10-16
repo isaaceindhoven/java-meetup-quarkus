@@ -7,4 +7,6 @@ commonLabels:
 
 resources:
   - deployment.yaml
+  - deployment-db.yaml
   - service.yaml
+  - service-db.yaml

@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: java-meetup-quarkus-db
+  labels:
+    app.kubernetes.io/name: java-meetup-quarkus-db
+spec:
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: java-meetup-quarkus-db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: java-meetup-quarkus-db
+    spec:
+      containers:
+        - name: db
+          image: postgres:11.5-alpine
+          imagePullPolicy: Always
+          ports:
+            - name: postgresql
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: quarkus_test
+            - name: POSTGRES_USER
+              value: quarkus_test
+            - name: POSTGRES_PASSWORD
+              value: quarkus_test
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "64M"
+            limits:
+              memory: "64M"

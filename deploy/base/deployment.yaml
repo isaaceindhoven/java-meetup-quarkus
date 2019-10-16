@@ -18,6 +18,15 @@ spec:
         - name: web
           image: jwnmulder/java-meetup-quarkus:latest
           imagePullPolicy: Always
+          env:
+            - name: QUARKUS_DATASOURCE_DRIVER
+              value: org.postgresql.Driver
+            - name: QUARKUS_DATASOURCE_URL
+              value: dbc:postgresql://java-meetup-quarkus-db/quarkus_test
+            - name: QUARKUS_DATASOURCE_USERNAME
+              value: quarkus_test
+            - name: QUARKUS_DATASOURCE_PASSWORD
+              value: quarkus_test
           ports:
             - name: http
               containerPort: 8080
