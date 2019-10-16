@@ -102,7 +102,7 @@ pipeline {
         }
         stage('manual testing') {
           steps {
-            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+            catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
               timeout(time: 15, unit: 'MINUTES')  {
                 //input message: "Check results on ${env.APP_TEST_URL}", parameters: [choice(name: 'Tests OK?', choices: ['NOT OK', 'OK'])], submitterParameter: 'manualTestResult'
                 input id: 'done-testing', message: 'Done testing?'
