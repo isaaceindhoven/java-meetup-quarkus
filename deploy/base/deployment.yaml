@@ -22,7 +22,7 @@ spec:
             - name: QUARKUS_DATASOURCE_DRIVER
               value: org.postgresql.Driver
             - name: QUARKUS_DATASOURCE_URL
-              value: jdbc:postgresql://java-meetup-quarkus-db/quarkus_test
+              value: "jdbc:postgresql://$(DB_SERVICE)/quarkus_test"
             - name: QUARKUS_DATASOURCE_USERNAME
               value: quarkus_test
             - name: QUARKUS_DATASOURCE_PASSWORD

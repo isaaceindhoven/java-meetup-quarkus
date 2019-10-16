@@ -10,3 +10,12 @@ resources:
   - deployment-db.yaml
   - service.yaml
   - service-db.yaml
+
+vars:
+  - name: DB_SERVICE
+    objref:
+      kind: Service
+      name: java-meetup-quarkus-db
+      apiVersion: v1
+    fieldref:
+      fieldpath: metadata.name
