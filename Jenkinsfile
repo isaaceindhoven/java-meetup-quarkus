@@ -113,7 +113,7 @@ pipeline {
       }
     }
 
-    stage('Undeploy from test') {
+    stage('undeploy from test') {
       agent {
         docker reuseNode: true, image: 'place1/kube-tools:2019.10.13', args: "--entrypoint=''"
       }

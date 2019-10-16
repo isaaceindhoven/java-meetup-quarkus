@@ -1,0 +1,31 @@
+pipeline {
+  agent any
+
+  options {
+    disableConcurrentBuilds()
+    ansiColor('xterm')
+  }
+  
+  environment {
+    JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
+  }
+
+  stages {
+
+    stage ('checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage ('build') {
+      agent {
+        docker reuseNode: true, image: "maven:3.6.2-jdk-11", args: "-e MAVEN_CONFIG=${WORKSPACE}/.m2"
+      }
+      steps {
+        sh "mvn clean package"
+        junit '**/target/surefire-reports/*.xml'
+      }
+    }
+  }
+}
