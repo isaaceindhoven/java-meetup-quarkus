@@ -1,0 +1,45 @@
+pipeline {
+  agent any
+
+  options {
+    disableConcurrentBuilds()
+    ansiColor('xterm')
+  }
+  
+  environment {
+    JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
+    GIT_SHA_SHORT="${env.GIT_COMMIT.take(7)}"
+    APP_NAME="java-meetup-quarkus"
+    APP_IMAGE="jwnmulder/${env.APP_NAME}:1.0-${env.GIT_BRANCH.replace('/', '-')}.${env.GIT_SHA_SHORT}"
+  }
+
+  stages {
+
+    stage ('checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage ('build') {
+      agent {
+        docker reuseNode: true, image: "maven:3.6.2-jdk-11", args: "-e MAVEN_CONFIG=${WORKSPACE}/.m2"
+      }
+      steps {
+        sh "mvn clean package"
+        junit '**/target/surefire-reports/*.xml'
+      }
+    }
+
+    stage('docker build') {
+      steps {
+        script {
+          def image = docker.build(env.APP_IMAGE, "-f src/main/docker/Dockerfile.jvm --pull .")
+          docker.withRegistry("https://registry.hub.docker.com", "docker-hub") {
+            image.push()
+          }
+        }
+      }
+    }
+  }
+}
