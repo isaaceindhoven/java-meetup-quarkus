@@ -9,10 +9,11 @@ pipeline {
   environment {
     JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
     GIT_SHA_SHORT="${env.GIT_COMMIT.take(7)}"
+    GIT_BRANCH_SAFE="${env.GIT_BRANCH.minus('origin/').replace('/', '-')}"
     APP_NAME="java-meetup-quarkus"
-    APP_IMAGE="jwnmulder/${env.APP_NAME}:1.0-${env.GIT_BRANCH.minus('origin/').replace('/', '-')}.${env.GIT_SHA_SHORT}"
+    APP_IMAGE="jwnmulder/${env.APP_NAME}:1.0-${env.GIT_BRANCH_SAFE}.${env.GIT_SHA_SHORT}"
     KUBE_NAMESPACE="java-meetup"
-    KUBE_NAME_PREFIX="${env.GIT_BRANCH.replace('/', '-')}"
+    KUBE_NAME_PREFIX="${env.GIT_BRANCH_SAFE}"
     KUBE_DEPLOY_NAME="${env.KUBE_NAME_PREFIX}-${env.APP_NAME}"
   }
 
