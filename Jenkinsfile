@@ -94,11 +94,21 @@ pipeline {
     stage('Testing') {
       parallel {
         stage('automated testing') {
+          agent {
+            docker reuseNode: true, image: "place1/kube-tools:2019.10.13", args: "--entrypoint=''"
+          }
           steps {
-            script {
-              sh "echo test"
-              // telnet
-              sleep 60
+            withCredentials([file(credentialsId: "kubectl-config", variable: 'KUBECONFIG')]) {
+              sh "kubectl -n ${env.KUBE_NAMESPACE} port-forward service/${KUBE_DEPLOY_NAME}-external 8080:8080 &"
+              sleep 5
+              script {
+                30.times {
+                  sh "curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:8080/hello"
+                  sleep 1
+                  sh "curl --write-out '%{http_code}' --silent --output /dev/null http://localhost:8080/health"
+                  sleep 1
+                }
+              }
             }
           }
         }
@@ -132,12 +142,12 @@ pipeline {
 def addTestUrlBadge() {
   script {
     def serviceNodePort = sh(script: "kubectl -n ${env.KUBE_NAMESPACE} get service ${env.KUBE_DEPLOY_NAME}-external -o=jsonpath='{.spec.ports[?(@.port==8080)].nodePort}'", returnStdout: true)
-    env.APP_TEST_URL = "http://localhost:${serviceNodePort}/"
+    env.APP_TEST_URL = "http://localhost:${serviceNodePort}"
   }
-  addHtmlBadge id: 'test-url', html: "Test URL: <a href='${env.APP_TEST_URL}'>${env.APP_TEST_URL}</a>"
+  addHtmlBadge id: 'test-url', html: "Test URL: <a href='${env.APP_TEST_URL}/'>${env.APP_TEST_URL}/</a>"
 }
 
 def disableTestUrlBadge() {
   removeHtmlBadges id: 'test-url'
-  addHtmlBadge id: 'test-url', html: "Test URL: <a href='${env.APP_TEST_URL}' style='text-decoration: line-through;'>${env.APP_TEST_URL}</a>"
+  addHtmlBadge id: 'test-url', html: "Test URL: <a href='${env.APP_TEST_URL}/' style='text-decoration: line-through;'>${env.APP_TEST_URL}/</a>"
 }
