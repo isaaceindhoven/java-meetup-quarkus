@@ -9,6 +9,7 @@ pipeline {
   environment {
     JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
     GIT_SHA_SHORT="${env.GIT_COMMIT.take(7)}"
+    QUARKUS_MODE="${env.GIT_BRANCH.contains('native') ? 'native' : 'jvm'}"
     APP_NAME="java-meetup-quarkus"
     APP_IMAGE="jwnmulder/${env.APP_NAME}:1.0-${env.GIT_BRANCH.replace('/', '-')}.${env.GIT_SHA_SHORT}"
     KUBE_NAMESPACE="java-meetup"
@@ -48,7 +49,7 @@ pipeline {
     stage('docker build') {
       steps {
         script {
-          def image = docker.build(env.APP_IMAGE, "-f src/main/docker/Dockerfile.jvm --pull .")
+          def image = docker.build(env.APP_IMAGE, "-f src/main/docker/Dockerfile.${env.QUARKUS_MODE} --pull .")
           docker.withRegistry("https://registry.hub.docker.com", "docker-hub") {
             image.push()
           }
