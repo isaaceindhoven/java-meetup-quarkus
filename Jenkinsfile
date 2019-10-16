@@ -10,7 +10,7 @@ pipeline {
     JAVA_TOOL_OPTIONS="-Djansi.force=true -Duser.home=${WORKSPACE}"
     GIT_SHA_SHORT="${env.GIT_COMMIT.take(7)}"
     APP_NAME="java-meetup-quarkus"
-    APP_IMAGE="jwnmulder/${env.APP_NAME}:1.0-${env.GIT_BRANCH.replace('/', '-')}.${env.GIT_SHA_SHORT}"
+    APP_IMAGE="jwnmulder/${env.APP_NAME}:1.0-${env.GIT_BRANCH.minus('origin/').replace('/', '-')}.${env.GIT_SHA_SHORT}"
     KUBE_NAMESPACE="java-meetup"
     KUBE_NAME_PREFIX="${env.GIT_BRANCH.replace('/', '-')}"
     KUBE_DEPLOY_NAME="${env.KUBE_NAME_PREFIX}-${env.APP_NAME}"
@@ -96,6 +96,7 @@ pipeline {
           steps {
             script {
               sh "echo test"
+              // telnet
               sleep 60
             }
           }
@@ -104,7 +105,6 @@ pipeline {
           steps {
             catchError(buildResult: 'SUCCESS', stageResult: 'SUCCESS') {
               timeout(time: 15, unit: 'MINUTES')  {
-                //input message: "Check results on ${env.APP_TEST_URL}", parameters: [choice(name: 'Tests OK?', choices: ['NOT OK', 'OK'])], submitterParameter: 'manualTestResult'
                 input id: 'done-testing', message: 'Done testing?'
               }
             }
