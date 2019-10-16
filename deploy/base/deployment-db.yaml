@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: db
-          image: postgres:10.5
+          image: postgres:11.5-alpine
           imagePullPolicy: Always
           ports:
             - name: postgresql
@@ -33,4 +33,4 @@ spec:
               cpu: "10m"
               memory: "64M"
             limits:
-              memory: "64M"
+              memory: "128M"
